@@ -13,6 +13,7 @@ use sshx_server::{
     state::ServerState,
     web::protocol::{WsClient, WsServer, WsUser, WsWinsize},
     Server,
+    ServerOptions,
 };
 use tokio::net::{TcpListener, TcpStream};
 use tokio::time;
@@ -39,7 +40,7 @@ impl TestServer {
         {
             let server = Arc::clone(&server);
             tokio::spawn(async move {
-                server.listen(incoming).await.unwrap();
+                server.listen(incoming, ServerOptions::default()).await.unwrap();
             });
         }
 

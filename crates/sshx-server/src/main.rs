@@ -1,6 +1,7 @@
 use std::{
     net::{IpAddr, SocketAddr},
     process::ExitCode,
+    path::PathBuf,
 };
 
 use anyhow::Result;
@@ -36,6 +37,10 @@ struct Args {
     /// Hostname of this server, if running multiple servers.
     #[clap(long)]
     host: Option<String>,
+
+    /// Path to the web directory to serve.
+    #[clap(long, default_value = "build")]
+    web_dir: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -50,12 +55,13 @@ async fn start(args: Args) -> Result<()> {
     options.override_origin = args.override_origin;
     options.redis_url = args.redis_url;
     options.host = args.host;
+    options.web_dir = args.web_dir;
 
-    let server = Server::new(options)?;
+    let server = Server::new(options.clone())?;
 
     let serve_task = async {
         info!("server listening at {addr}");
-        server.bind(&addr).await
+        server.bind(&addr, options).await
     };
 
     let signals_task = async {

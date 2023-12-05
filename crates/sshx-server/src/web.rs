@@ -6,22 +6,28 @@ use axum::routing::{get, get_service};
 use axum::Router;
 use tower_http::services::{ServeDir, ServeFile};
 
-use crate::ServerState;
+use tracing::error;
+
+use crate::{ServerState, ServerOptions};
 
 pub mod protocol;
 mod socket;
 
 /// Returns the web application server, routed with Axum.
-pub fn app() -> Router<Arc<ServerState>> {
-    let root_spa = ServeFile::new("build/spa.html")
-        .precompressed_gzip()
-        .precompressed_br();
+pub fn app(options: ServerOptions) -> Router<Arc<ServerState>> {
 
     // Serves static SvelteKit build files.
-    let static_files = ServeDir::new("build")
+    let web_dir_path = options.web_dir.unwrap_or_default();
+    if !web_dir_path.is_dir() {
+         error!("failed to serve {}, directory does not exist", web_dir_path.display());
+    }
+    let spa_file = ServeFile::new(web_dir_path.join("/spa.html"))
+        .precompressed_gzip()
+        .precompressed_br();
+    let static_files = ServeDir::new(web_dir_path)
         .precompressed_gzip()
         .precompressed_br()
-        .fallback(root_spa);
+        .fallback(spa_file);
 
     Router::new()
         .nest("/api", backend())

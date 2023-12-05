@@ -12,7 +12,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-use std::{net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, sync::Arc, path::PathBuf};
 
 use anyhow::Result;
 use hyper::server::conn::AddrIncoming;
@@ -42,6 +42,9 @@ pub struct ServerOptions {
 
     /// Hostname of this server, if running multiple servers.
     pub host: Option<String>,
+
+    /// Path to the web directory to serve.
+    pub web_dir: Option<PathBuf>,
 }
 
 /// Stateful object that manages the sshx server, with graceful termination.
@@ -65,7 +68,7 @@ impl Server {
     }
 
     /// Run the application server, listening on a stream of connections.
-    pub async fn listen(&self, incoming: AddrIncoming) -> Result<()> {
+    pub async fn listen(&self, incoming: AddrIncoming, options: ServerOptions) -> Result<()> {
         let state = self.state.clone();
         let terminated = self.shutdown.wait();
         tokio::spawn(async move {
@@ -79,12 +82,12 @@ impl Server {
             }
         });
 
-        listen::start_server(self.state(), incoming, self.shutdown.wait()).await
+        listen::start_server(self.state(), incoming, self.shutdown.wait(), options).await
     }
 
     /// Convenience function to call [`Server::listen`] bound to a TCP address.
-    pub async fn bind(&self, addr: &SocketAddr) -> Result<()> {
-        self.listen(AddrIncoming::bind(addr)?).await
+    pub async fn bind(&self, addr: &SocketAddr, options: ServerOptions) -> Result<()> {
+        self.listen(AddrIncoming::bind(addr)?, options).await
     }
 
     /// Send a graceful shutdown signal to the server.

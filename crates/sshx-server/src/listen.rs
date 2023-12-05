@@ -13,7 +13,7 @@ use tonic::transport::Server as TonicServer;
 use tower::{steer::Steer, ServiceBuilder, ServiceExt};
 use tower_http::trace::TraceLayer;
 
-use crate::{grpc::GrpcServer, web, ServerState};
+use crate::{grpc::GrpcServer, web, ServerState, ServerOptions};
 
 /// Bind and listen from the application, with a state and termination signal.
 ///
@@ -23,10 +23,11 @@ pub(crate) async fn start_server(
     state: Arc<ServerState>,
     incoming: AddrIncoming,
     signal: impl Future<Output = ()>,
+    options: ServerOptions,
 ) -> Result<()> {
     type BoxError = Box<dyn StdError + Send + Sync>;
 
-    let http_service = web::app()
+    let http_service = web::app(options)
         .with_state(state.clone())
         .layer(TraceLayer::new_for_http())
         .map_response(|r| r.map(|b| b.map_err(BoxError::from).boxed_unsync()))
